@@ -40,7 +40,7 @@ func setupLog(tempFolder string) {
 		_ = os.Mkdir(logDirPath, os.ModePerm)
 	}
 
-	logFilePath := path.Join(logDirPath, "go-oracle-connector.log")
+	logFilePath := path.Join(logDirPath, "go-mssql-connector.log")
 	lumberjackLogger := &lumberjack.Logger{
 		Filename:   logFilePath,
 		MaxSize:    5,
