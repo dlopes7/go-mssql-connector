@@ -31,7 +31,7 @@ type Config struct {
 
 var log *logrus.Logger
 
-func setupLog(tempFolder string) {
+func setupLog(tempFolder string, endpointID string) {
 	log = logrus.New()
 	logDirPath := path.Join(tempFolder, "log")
 
@@ -40,7 +40,7 @@ func setupLog(tempFolder string) {
 		_ = os.Mkdir(logDirPath, os.ModePerm)
 	}
 
-	logFilePath := path.Join(logDirPath, "go-mssql-connector.log")
+	logFilePath := path.Join(logDirPath, fmt.Sprintf("%s.log", endpointID))
 	lumberjackLogger := &lumberjack.Logger{
 		Filename:   logFilePath,
 		MaxSize:    5,
@@ -113,7 +113,7 @@ func main() {
 		response.ErrorMessage = "The parameter tempfolder must be a path"
 	} else {
 
-		setupLog(*tempFolder)
+		setupLog(*tempFolder, *endpointID)
 
 		var err error
 
