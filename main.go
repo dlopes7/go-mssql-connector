@@ -20,13 +20,14 @@ type Query struct {
 }
 
 type Config struct {
-	Queries  []Query `json:"queries"`
-	Host     string  `json:"host"`
-	User     string  `json:"username"`
-	Password string  `json:"password"`
-	Port     int     `json:"port"`
-	Database string  `json:"database"`
-	LogLevel string  `json:"logLevel"`
+	Queries               []Query `json:"queries"`
+	Host                  string  `json:"host"`
+	User                  string  `json:"username"`
+	Password              string  `json:"password"`
+	Port                  int     `json:"port"`
+	Database              string  `json:"database"`
+	LogLevel              string  `json:"logLevel"`
+	WindowsAuthentication bool    `json:"windowsAuthentication"`
 }
 
 var log *logrus.Logger
@@ -130,7 +131,7 @@ func main() {
 			Log: log,
 		}
 
-		db, err := dbConnection.GetDB(c.Host, c.Port, c.User, c.Password, c.Database)
+		db, err := dbConnection.GetDB(c.Host, c.Port, c.User, c.Password, c.Database, c.WindowsAuthentication)
 		if err != nil {
 			response.Error = true
 			response.ErrorMessage = err.Error()
