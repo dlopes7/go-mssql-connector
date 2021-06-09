@@ -109,9 +109,11 @@ func main() {
 	if endpointID == nil || *endpointID == "" {
 		response.Error = true
 		response.ErrorMessage = "The parameter endpoint must be a valid endpoint ID"
+		fmt.Printf("%+v", response)
 	} else if tempFolder == nil || *tempFolder == "" {
 		response.Error = true
 		response.ErrorMessage = "The parameter tempfolder must be a path"
+		fmt.Printf("%+v", response)
 	} else {
 
 		setupLog(*tempFolder, *endpointID)

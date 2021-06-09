@@ -22,6 +22,7 @@ func (o *MSSQLConnector) GetDB(hostname string, port int, username string, passw
 	if !windowsAuthentication {
 		cs = fmt.Sprintf("%s;password=%s", cs, password)
 	} else {
+		cs = fmt.Sprintf("%s;Integrated Security=sspi", cs)
 		currentUser, err := user.Current()
 		if err != nil {
 			currentUser = &user.User{
