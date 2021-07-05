@@ -1,6 +1,7 @@
 package connector
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -11,10 +12,15 @@ func Query(query string, db *sql.DB) *QueryResponse {
 	response := new(QueryResponse)
 
 	if db != nil {
-		rows, err := db.Query(query)
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 300*time.Second)
+		defer cancel()
+
+		rows, err := db.QueryContext(ctx, query)
 		if err != nil {
 			response.Error = true
 			response.ErrorMessage = err.Error()
+			response.Timestamp = time.Now().UTC().Unix()
 			return response
 		}
 		defer rows.Close()
@@ -23,6 +29,7 @@ func Query(query string, db *sql.DB) *QueryResponse {
 		if err != nil {
 			response.Error = true
 			response.ErrorMessage = err.Error()
+			response.Timestamp = time.Now().UTC().Unix()
 			return response
 		}
 
@@ -32,6 +39,7 @@ func Query(query string, db *sql.DB) *QueryResponse {
 			if err != nil {
 				response.Error = true
 				response.ErrorMessage = err.Error()
+				response.Timestamp = time.Now().UTC().Unix()
 				return response
 			}
 			cv := rc.Get()
@@ -55,6 +63,7 @@ func Query(query string, db *sql.DB) *QueryResponse {
 	} else {
 		response.Error = true
 		response.ErrorMessage = "Received a nil object as a DB connection "
+		response.Timestamp = time.Now().UTC().Unix()
 		return response
 	}
 	response.Timestamp = time.Now().UTC().Unix()
