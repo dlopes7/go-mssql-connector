@@ -26,6 +26,12 @@ func Query(query string, db *sql.DB) *QueryResponse {
 			return response
 		}
 
+		err = rows.Err()
+		if err != nil {
+			response.Error = true
+			response.ErrorMessage = err.Error()
+			return response
+		}
 		rc := NewMapStringScan(columnNames)
 		for rows.Next() {
 			err := rc.Update(rows)
@@ -78,7 +84,7 @@ func NewMapStringScan(columnNames []string) *mapStringScan {
 		colNames: columnNames,
 	}
 	for i := 0; i < lenCN; i++ {
-		s.cp[i] = new(sql.RawBytes)
+		s.cp[i] = new(sql.NullString)
 	}
 	return s
 }
@@ -89,12 +95,12 @@ func (s *mapStringScan) Update(rows *sql.Rows) error {
 	}
 
 	for i := 0; i < s.colCount; i++ {
-		if rb, ok := s.cp[i].(*sql.RawBytes); ok {
+		if rb, ok := s.cp[i].(*sql.NullString); ok {
 
-			s.row[i] = map[string]string{s.colNames[i]: string(*rb)}
-			*rb = nil // reset pointer to discard current value to avoid a bug
+			s.row[i] = map[string]string{s.colNames[i]: rb.String}
+			rb = nil // reset pointer to discard current value to avoid a bug
 		} else {
-			return fmt.Errorf("Cannot convert index %d column %s to type *sql.RawBytes", i, s.colNames[i])
+			return fmt.Errorf("Cannot convert index %d column %s to type *sql.NullString", i, s.colNames[i])
 		}
 	}
 	return nil

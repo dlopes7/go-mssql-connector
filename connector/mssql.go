@@ -18,18 +18,18 @@ func (o *MSSQLConnector) GetDB(hostname string, port int, username string, passw
 	var err error
 
 	var cs string
-	cs = fmt.Sprintf("server=%s;user id=%s;port=%d;database=%s", hostname, username, port, databaseName)
+	cs = fmt.Sprintf("server=%s;port=%d;database=%s", hostname, port, databaseName)
 	if !windowsAuthentication {
-		cs = fmt.Sprintf("%s;password=%s", cs, password)
+		cs = fmt.Sprintf("%s;user id=%s;password=%s", cs, username, password)
 	} else {
-		cs = fmt.Sprintf("%s;Integrated Security=sspi", cs)
+		cs = fmt.Sprintf("%s;trusted_connection=yes", cs)
 		currentUser, err := user.Current()
 		if err != nil {
 			currentUser = &user.User{
-				Username: "Unknown",
+				Username: username,
 			}
 		}
-		o.Log.Infof("Attempting to connect to %s:%d (%s) using Windows Authentication. We are running as %+v", hostname, port, databaseName, currentUser)
+		o.Log.Infof("Attempting to connect to %s:%d (%s) using Windows Authentication. We are running as %s", hostname, port, databaseName, currentUser.Username)
 	}
 
 	db, err = sql.Open("mssql", cs)
