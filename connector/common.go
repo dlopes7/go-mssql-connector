@@ -1,6 +1,7 @@
 package connector
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -11,10 +12,15 @@ func Query(query string, db *sql.DB) *QueryResponse {
 	response := new(QueryResponse)
 
 	if db != nil {
-		rows, err := db.Query(query)
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 300*time.Second)
+		defer cancel()
+
+		rows, err := db.QueryContext(ctx, query)
 		if err != nil {
 			response.Error = true
 			response.ErrorMessage = err.Error()
+			response.Timestamp = time.Now().UTC().Unix()
 			return response
 		}
 		defer rows.Close()
@@ -23,21 +29,17 @@ func Query(query string, db *sql.DB) *QueryResponse {
 		if err != nil {
 			response.Error = true
 			response.ErrorMessage = err.Error()
+			response.Timestamp = time.Now().UTC().Unix()
 			return response
 		}
 
-		err = rows.Err()
-		if err != nil {
-			response.Error = true
-			response.ErrorMessage = err.Error()
-			return response
-		}
 		rc := NewMapStringScan(columnNames)
 		for rows.Next() {
 			err := rc.Update(rows)
 			if err != nil {
 				response.Error = true
 				response.ErrorMessage = err.Error()
+				response.Timestamp = time.Now().UTC().Unix()
 				return response
 			}
 			cv := rc.Get()
@@ -61,6 +63,7 @@ func Query(query string, db *sql.DB) *QueryResponse {
 	} else {
 		response.Error = true
 		response.ErrorMessage = "Received a nil object as a DB connection "
+		response.Timestamp = time.Now().UTC().Unix()
 		return response
 	}
 	response.Timestamp = time.Now().UTC().Unix()
@@ -84,7 +87,7 @@ func NewMapStringScan(columnNames []string) *mapStringScan {
 		colNames: columnNames,
 	}
 	for i := 0; i < lenCN; i++ {
-		s.cp[i] = new(sql.NullString)
+		s.cp[i] = new(sql.RawBytes)
 	}
 	return s
 }
@@ -95,12 +98,12 @@ func (s *mapStringScan) Update(rows *sql.Rows) error {
 	}
 
 	for i := 0; i < s.colCount; i++ {
-		if rb, ok := s.cp[i].(*sql.NullString); ok {
+		if rb, ok := s.cp[i].(*sql.RawBytes); ok {
 
-			s.row[i] = map[string]string{s.colNames[i]: rb.String}
-			rb = nil // reset pointer to discard current value to avoid a bug
+			s.row[i] = map[string]string{s.colNames[i]: string(*rb)}
+			*rb = nil // reset pointer to discard current value to avoid a bug
 		} else {
-			return fmt.Errorf("Cannot convert index %d column %s to type *sql.NullString", i, s.colNames[i])
+			return fmt.Errorf("Cannot convert index %d column %s to type *sql.RawBytes", i, s.colNames[i])
 		}
 	}
 	return nil
