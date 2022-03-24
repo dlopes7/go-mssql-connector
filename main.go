@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -49,7 +48,6 @@ func setupLog(tempFolder string, endpointID string) {
 	}
 	log.SetOutput(lumberjackLogger)
 	log.SetLevel(logrus.InfoLevel)
-	log.SetReportCaller(true)
 }
 
 func loadConfig(endpointID string, tempFolder string) *Config {
@@ -76,6 +74,9 @@ func loadConfig(endpointID string, tempFolder string) *Config {
 	} else {
 		log.WithFields(logrus.Fields{"level": level}).Info(fmt.Sprintf("Setting log level from %s", fileName))
 		log.SetLevel(level)
+	}
+	if os.Getenv("DATABASE_PASSWORD") != "" {
+		c.Password = os.Getenv("DATABASE_PASSWORD")
 	}
 
 	return c
@@ -117,36 +118,27 @@ func main() {
 	} else {
 
 		setupLog(*tempFolder, *endpointID)
-
-		var err error
-
 		c := loadConfig(*endpointID, *tempFolder)
-		decoded, err := base64.StdEncoding.DecodeString(c.Password)
-		if err != nil {
-			response.Error = true
-			response.ErrorMessage = fmt.Sprintf("Could not decode password: %s", err.Error())
-		} else {
-			c.Password = string(decoded)
-		}
-
 		dbConnection := &connector.MSSQLConnector{
 			Log: log,
 		}
 
-		db, err := dbConnection.GetDB(c.Host, c.Port, c.User, c.Password, c.Database, c.WindowsAuthentication)
-		if err != nil {
-			response.Error = true
-			response.ErrorMessage = err.Error()
-			log.WithFields(logrus.Fields{"Error": err.Error()}).Error("Error obtaining DB")
-		} else {
-			defer db.Close()
-			for _, query := range c.Queries {
-				log.WithFields(logrus.Fields{"Query": query.Name, "QueryString": query.QueryString}).Info("Running query")
-				start := time.Now()
-				qr := connector.Query(query.QueryString, db)
-				qr.Duration = time.Now().Sub(start).Nanoseconds()
-				qr.Name = query.Name
-				response.Queries = append(response.Queries, qr)
+		if len(c.Queries) > 0 {
+			db, err := dbConnection.GetDB(c.Host, c.Port, c.User, c.Password, c.Database, c.WindowsAuthentication)
+			if err != nil {
+				response.Error = true
+				response.ErrorMessage = err.Error()
+				log.WithFields(logrus.Fields{"Error": err.Error()}).Error("Error obtaining DB")
+			} else {
+				defer db.Close()
+				for _, query := range c.Queries {
+					log.WithFields(logrus.Fields{"Query": query.Name, "QueryString": query.QueryString}).Info("Running query")
+					start := time.Now()
+					qr := connector.Query(query.QueryString, db)
+					qr.Duration = time.Now().Sub(start).Nanoseconds()
+					qr.Name = query.Name
+					response.Queries = append(response.Queries, qr)
+				}
 			}
 		}
 		writeResponse(*endpointID, *tempFolder, response)
